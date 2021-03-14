@@ -12,13 +12,16 @@ const bigqueryClient = new BigQuery();
 exports.updateFireStore = functions.pubsub.topic('doorlockdata').onPublish((message) => {
 
     // Get attribute of the PubSub message JSON body.
-    let Status, DoorID, NFCValue, timecollected = null;
+    let devID, md, rd, temp, hum, ldr, ts = null;
     try {
-      Status = message.json.Status;
-      DoorID = message.json.DoorID;
-      NFCValue = message.json.NFCValue;
-      timecollected = message.json.timecollected;
-      console.log(`Door status is ${Status} and Door ID is ${DoorID}`);
+      devID = message.json.devID;
+      md = message.json.md;
+      rd = message.json.rd;
+      temp = message.json.temp;
+      hum = message.json.hum;
+      ldr = message.json.ldr;
+      ts = message.json.ts;
+      console.log(`Update from  ${devID} at ${ts}`);
     } catch (e) {
     console.error('PubSub message was not JSON', e);
     }
@@ -26,14 +29,12 @@ exports.updateFireStore = functions.pubsub.topic('doorlockdata').onPublish((mess
     //Update firestore
     let id = null;
     const FieldValue = admin.firestore.FieldValue;
-    const collection = firestore.collection('door_access');
-    const updateDoc = collection.where ("DoorID", "==", DoorID).limit(1).get().then(query => {
+    const collection = firestore.collection('truck_info');
+    const updateDoc = collection.where ("devID", "==", devID).limit(1).get().then(query => {
         id = query.docs[0].id;
-        collection.doc(id).update({'Status' : Status, 'NFCValue' : NFCValue, TimeStamp: FieldValue.serverTimestamp()});
-        const addDoc = firestore.collection('door_access_log').add({'DoorID' : DoorID, 'access_time': FieldValue.serverTimestamp(), 'status' : Status, 'user_uuid' : id});
-        return console.log("Update Success");
+        collection.doc(id).update({'temp' : temp});
+        return console.log("Firestore update Success");
       });
-    console.log ("Created doc successfully");
 
     //Update bigquery
     //TODO
