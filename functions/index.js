@@ -4,12 +4,15 @@ const functions = require("firebase-functions"),
   admin = require("firebase-admin"),
   {BigQuery} = require('@google-cloud/bigquery');
 
-var unirest = require('unirest'); 
+const fetch = require('node-fetch');
  
 const app = admin.initializeApp();
 const firestore = app.firestore();  
 const bigqueryClient = new BigQuery();
 
+//Get current weather temp
+let weather_temp = null;   
+const getWeatherTemp = fetch('https://api.data.gov.sg/v1/environment/air-temperature').then(res => res.json()).then(data => weather_temp = data.items[0].readings[1].value).then(() => console.log (weather_temp));
 
 exports.updateReadingsFirestore = functions.pubsub.topic('truckupdate').onPublish((message) => {
 
@@ -42,7 +45,8 @@ exports.updateReadingsFirestore = functions.pubsub.topic('truckupdate').onPublis
 
 exports.updateReadingsBigQuery = functions.pubsub.topic('truckupdate').onPublish((message) => {
 
-      // Get attribute of the PubSub message JSON body.
+
+    // Get attribute of the PubSub message JSON body.
     let devID, md, rd, temp, hum, ldr, ts = null;
     try {
       devID = message.json.devID;
@@ -57,23 +61,18 @@ exports.updateReadingsBigQuery = functions.pubsub.topic('truckupdate').onPublish
     console.error('PubSub message was not JSON', e);
     }
       
-    //Get current weather temp
-    //var req = unirest.get('https://api.data.gov.sg/v1/environment/air-temperature').end(function (res) { 
-    //    if (res.error) throw new Error(res.error);
-    //    console.log(res.raw_body);
-    //  });
-      
     //Update bigquery
     const datasetId = 'truck_readings';
     const tableId = 'readings';
     const rows = [
-        {devID: devID, temp: temp, hum: hum, md: md, rd: rd, ts: ts}
+        {devID: devID, temp: temp, hum: hum, md: md, rd: rd, ts: ts, weather_temp:weather_temp}
       ];
     
     // Insert data into a table
       try{
       const updatebigquery= bigqueryClient.dataset(datasetId).table(tableId).insert(rows);
       console.log(`Inserted ${rows}`);
+      console.log("Weather temp :", weather_temp)
       }catch (e) {
         console.error('Error inserting rows into bigquery', e);
       }
