@@ -60,7 +60,7 @@ exports.updateReadingsBigQuery = functions.pubsub.topic('truckupdate').onPublish
     } catch (e) {
     console.error('PubSub message was not JSON', e);
     }
-      
+   
     //Update bigquery
     const datasetId = 'truck_readings';
     const tableId = 'readings';
